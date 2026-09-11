@@ -4,169 +4,229 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Supreme Court of Pakistan — Judgment Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    color-scheme: light;
-    --surface: #fcfcfb;
-    --page: #f9f9f7;
-    --ink: #0b0b0b;
-    --ink-2: #52514e;
-    --muted: #898781;
-    --grid: #e1e0d9;
-    --border: rgba(11,11,11,0.10);
-    --blue: #2a78d6;
-    --orange: #eb6834;
-    --aqua: #1baf7a;
-    --yellow: #eda100;
-    --magenta: #e87ba4;
-    --violet: #4a3aa7;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color-scheme: dark;
-      --surface: #1a1a19;
-      --page: #0d0d0d;
-      --ink: #ffffff;
-      --ink-2: #c3c2b7;
-      --muted: #898781;
-      --grid: #2c2c2a;
-      --border: rgba(255,255,255,0.10);
-      --blue: #3987e5;
-      --orange: #d95926;
-      --aqua: #199e70;
-      --yellow: #c98500;
-      --magenta: #d55181;
-      --violet: #9085e9;
-    }
+    --bg:        #16140f;
+    --bg-2:      #1c1a14;
+    --panel:     #1f1c16;
+    --panel-2:   #24211a;
+    --ink:       #f3ece0;
+    --ink-2:     #beb3a0;
+    --muted:     #8c8272;
+    --gold:      #cc9f3b;
+    --gold-dim:  #a5822f;
+    --gold-wash: rgba(204,159,59,0.10);
+    --rust:      #b0562f;
+    --grid:      rgba(243,236,224,0.07);
+    --border:    rgba(243,236,224,0.10);
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background: var(--page);
+    background: var(--bg);
+    background-image:
+      radial-gradient(1200px 500px at 15% -10%, rgba(204,159,59,0.08), transparent 60%);
     color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-    padding: 0 16px 48px;
+    font-family: var(--sans);
+    padding: 0 20px 64px;
   }
-  .wrap { max-width: 1080px; margin: 0 auto; }
-  header { padding: 32px 0 8px; }
-  h1 { font-size: 1.5rem; margin: 0 0 6px; }
-  .subtitle { color: var(--ink-2); font-size: 0.95rem; max-width: 60ch; }
-  .source-note { color: var(--muted); font-size: 0.8rem; margin-top: 10px; }
-  .source-note a { color: var(--muted); }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  a { color: var(--gold); text-decoration: none; border-bottom: 1px solid rgba(204,159,59,0.35); }
+  a:hover { border-bottom-color: var(--gold); }
 
+  /* ---------- hero ---------- */
+  header.hero {
+    padding: 56px 0 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+  .eyebrow {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 14px; font-weight: 500;
+  }
+  .eyebrow::before {
+    content: "§"; font-family: var(--serif); font-size: 1.1rem; line-height: 1;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(1.8rem, 4vw, 2.75rem);
+    line-height: 1.08;
+    margin: 0 0 14px;
+    max-width: 18ch;
+  }
+  .subtitle { color: var(--ink-2); font-size: 1rem; max-width: 62ch; line-height: 1.55; }
+  .source-note { color: var(--muted); font-size: 0.82rem; margin-top: 16px; }
+  .source-note a { color: var(--muted); border-bottom-color: rgba(140,130,114,0.4); }
+  .source-note a:hover { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* ---------- hero stats: magazine stat spread, not cards ---------- */
   .stat-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-    margin: 20px 0;
-  }
-  .stat {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 14px 16px;
-  }
-  .stat .value { font-size: 1.4rem; font-weight: 600; }
-  .stat .label { color: var(--ink-2); font-size: 0.78rem; margin-top: 2px; }
-
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px 20px;
-    margin-bottom: 16px;
-  }
-  .panel h2 { font-size: 1rem; margin: 0 0 12px; }
-
-  .filters {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
+    margin: 34px 0 6px;
+  }
+  .stat {
+    flex: 1 1 160px;
+    padding: 0 24px 0 0;
+    margin-right: 24px;
+    border-right: 1px solid var(--border);
+  }
+  .stat:last-child { border-right: none; }
+  .stat .value {
+    font-family: var(--serif); font-weight: 600;
+    font-size: 2.1rem; color: var(--ink); line-height: 1;
+  }
+  .stat .label {
+    color: var(--muted); font-size: 0.72rem; margin-top: 8px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+
+  /* ---------- panels ---------- */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+  .panel h2 {
+    font-family: var(--serif); font-weight: 600; font-size: 1.05rem;
+    margin: 0 0 16px; color: var(--ink);
+  }
+
+  /* ---------- filters ---------- */
+  .filters { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end; }
+  .filter-group { display: flex; flex-direction: column; gap: 6px; }
+  .filters label {
+    font-size: 0.68rem; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
   }
   .filters select, .filters input {
-    background: var(--page);
+    appearance: none;
+    background: var(--bg-2);
     color: var(--ink);
     border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 7px 9px;
+    border-radius: 3px;
+    padding: 9px 12px;
     font-size: 0.85rem;
-    min-width: 120px;
+    font-family: var(--sans);
+    min-width: 150px;
   }
-  .filters label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 3px; }
-  .filter-group { display: flex; flex-direction: column; }
+  .filters select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238c8272'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 28px;
+  }
+  .filters select:focus, .filters input:focus {
+    outline: none; border-color: var(--gold);
+    box-shadow: 0 0 0 3px var(--gold-wash);
+  }
   #resetBtn {
-    align-self: flex-end;
     cursor: pointer;
     background: transparent;
     border: 1px solid var(--border);
     color: var(--ink-2);
-    border-radius: 6px;
-    padding: 7px 12px;
-    font-size: 0.8rem;
+    border-radius: 3px;
+    padding: 9px 16px;
+    font-size: 0.78rem;
+    font-family: var(--sans);
+    letter-spacing: 0.02em;
   }
-  #resetBtn:hover { color: var(--ink); }
-  #matchCount { color: var(--muted); font-size: 0.8rem; margin-top: 10px; }
+  #resetBtn:hover { color: var(--gold); border-color: var(--gold-dim); }
+  #matchCount { color: var(--muted); font-size: 0.8rem; margin-top: 16px; }
 
+  /* ---------- charts ---------- */
   .charts {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 16px;
+    gap: 28px;
   }
-  .chart-title { font-size: 0.85rem; color: var(--ink-2); margin-bottom: 8px; }
+  .chart-title {
+    font-size: 0.72rem; color: var(--muted); margin-bottom: 12px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
   svg.chart { width: 100%; height: auto; overflow: visible; }
-  .bar { fill: var(--blue); }
-  .bar:hover { fill: var(--orange); }
-  .axis-label { fill: var(--muted); font-size: 10px; }
-  .bar-value { fill: var(--ink-2); font-size: 10px; }
+  .bar { fill: var(--gold-dim); transition: fill 0.1s; }
+  .bar:hover { fill: var(--rust); }
+  .axis-label { fill: var(--ink-2); font-size: 10.5px; font-family: var(--sans); }
+  .bar-value { fill: var(--muted); font-size: 10px; font-family: var(--sans); }
+  .baseline { stroke: var(--border); stroke-width: 1; }
+
   .tooltip {
     position: fixed;
     pointer-events: none;
     background: var(--ink);
-    color: var(--surface);
+    color: var(--bg);
     font-size: 0.75rem;
-    padding: 5px 9px;
-    border-radius: 6px;
+    font-family: var(--sans);
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 3px;
     opacity: 0;
     transition: opacity 0.1s;
     z-index: 10;
     white-space: nowrap;
   }
 
+  /* ---------- table ---------- */
   table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
   th, td {
     text-align: left;
-    padding: 7px 8px;
+    padding: 10px 12px;
     border-bottom: 1px solid var(--grid);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 220px;
   }
-  th { color: var(--muted); font-weight: 500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em; }
-  tbody tr:hover { background: var(--page); }
-  .table-scroll { overflow-x: auto; max-height: 420px; overflow-y: auto; border: 1px solid var(--grid); border-radius: 8px; }
-  .pager { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.8rem; color: var(--ink-2); }
+  td:first-child { font-family: var(--serif); color: var(--ink); }
+  th {
+    color: var(--muted); font-weight: 500; font-size: 0.68rem;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    position: sticky; top: 0; background: var(--panel-2);
+  }
+  tbody tr { border-left: 2px solid transparent; }
+  tbody tr:hover { background: var(--gold-wash); border-left-color: var(--gold); }
+  .table-scroll {
+    overflow-x: auto; max-height: 440px; overflow-y: auto;
+    border: 1px solid var(--border); border-radius: 3px;
+  }
+  .pager {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 14px; font-size: 0.78rem; color: var(--ink-2);
+  }
   .pager button {
     background: transparent; border: 1px solid var(--border); color: var(--ink-2);
-    border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 0.8rem;
+    border-radius: 3px; padding: 6px 14px; cursor: pointer; font-size: 0.78rem; font-family: var(--sans);
   }
-  .pager button:disabled { opacity: 0.4; cursor: default; }
-  .outcome-tag { font-size: 0.72rem; color: var(--muted); }
+  .pager button:hover:not(:disabled) { color: var(--gold); border-color: var(--gold-dim); }
+  .pager button:disabled { opacity: 0.35; cursor: default; }
+  .outcome-tag { font-size: 0.72rem; color: var(--muted); font-style: italic; }
 
-  footer { color: var(--muted); font-size: 0.78rem; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--grid); }
-  footer a { color: var(--ink-2); }
+  footer {
+    color: var(--muted); font-size: 0.78rem; line-height: 1.6;
+    margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border);
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <h1>Supreme Court of Pakistan — Judgment Analytics</h1>
-    <div class="subtitle">A cleaned, deduplicated dataset of Supreme Court judgment metadata. Filter it below — every chart and the table update together.</div>
+  <header class="hero">
+    <div class="eyebrow">Supreme Court of Pakistan</div>
+    <h1>Judgment Analytics</h1>
+    <div class="subtitle">A cleaned, deduplicated dataset of Supreme Court judgment metadata — every chart and the table below respond to the filters together.</div>
     <div class="source-note">Read the pipeline and its limitations in the <a href="https://github.com/huzaifaguru/pk-judgment-analytics/blob/main/reports/data_quality_report.md">data quality report</a> and <a href="https://github.com/huzaifaguru/pk-judgment-analytics">README</a> before drawing conclusions from this.</div>
-  </header>
 
-  <div class="stat-row" id="statRow"></div>
+    <div class="stat-row" id="statRow"></div>
+  </header>
 
   <div class="panel">
     <h2>Filters</h2>
@@ -191,7 +251,7 @@
         <label for="fJudge">Judge folder</label>
         <select id="fJudge"><option value="">All judges</option></select>
       </div>
-      <div class="filter-group" style="flex:1; min-width:180px;">
+      <div class="filter-group" style="flex:1; min-width:200px;">
         <label for="fSearch">Search (case no. / party)</label>
         <input id="fSearch" type="text" placeholder="e.g. Civil Appeal, a party name…">
       </div>
@@ -203,7 +263,7 @@
   <div class="panel">
     <div class="charts">
       <div>
-        <div class="chart-title">Outcome (labeled cases in current filter)</div>
+        <div class="chart-title">Outcome — labeled cases in view</div>
         <svg class="chart" id="chartOutcome"></svg>
       </div>
       <div>
@@ -314,7 +374,7 @@ function countBy(rows, key) {
   return counts;
 }
 
-// simple horizontal bar chart, sorted descending, top N
+// horizontal bar chart, rounded data-ends, hover tooltip
 function drawBarChart(svgId, counts, opts = {}) {
   const svg = el(svgId);
   svg.innerHTML = '';
@@ -331,20 +391,27 @@ function drawBarChart(svgId, counts, opts = {}) {
     return;
   }
   const max = Math.max(...entries.map(e => e[1]));
-  const rowH = 22;
+  const rowH = 24;
   const width = 560;
   const labelW = opts.labelWidth || 130;
   const height = entries.length * rowH + 10;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 
+  const base = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  base.setAttribute('x1', labelW); base.setAttribute('x2', labelW);
+  base.setAttribute('y1', 0); base.setAttribute('y2', height);
+  base.setAttribute('class', 'baseline');
+  svg.appendChild(base);
+
   entries.forEach(([label, count], i) => {
     const y = i * rowH + 4;
     const barMaxW = width - labelW - 46;
-    const barW = Math.max(2, (count / max) * barMaxW);
+    const barW = Math.max(3, (count / max) * barMaxW);
+    const barH = rowH - 8;
 
     const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    text.setAttribute('x', labelW - 8);
-    text.setAttribute('y', y + 12);
+    text.setAttribute('x', labelW - 10);
+    text.setAttribute('y', y + barH / 2 + 3.5);
     text.setAttribute('text-anchor', 'end');
     text.setAttribute('class', 'axis-label');
     const lbl = String(label);
@@ -355,16 +422,16 @@ function drawBarChart(svgId, counts, opts = {}) {
     rect.setAttribute('x', labelW);
     rect.setAttribute('y', y);
     rect.setAttribute('width', barW);
-    rect.setAttribute('height', rowH - 6);
-    rect.setAttribute('rx', 3);
+    rect.setAttribute('height', barH);
+    rect.setAttribute('rx', Math.min(4, barH / 2));
     rect.setAttribute('class', 'bar');
     rect.addEventListener('mousemove', (e) => showTooltip(e, `${label}: ${count}`));
     rect.addEventListener('mouseleave', hideTooltip);
     svg.appendChild(rect);
 
     const valText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    valText.setAttribute('x', labelW + barW + 6);
-    valText.setAttribute('y', y + 12);
+    valText.setAttribute('x', labelW + barW + 8);
+    valText.setAttribute('y', y + barH / 2 + 3.5);
     valText.setAttribute('class', 'bar-value');
     valText.textContent = count;
     svg.appendChild(valText);
