@@ -211,6 +211,64 @@
   .pager button:disabled { opacity: 0.35; cursor: default; }
   .outcome-tag { font-size: 0.72rem; color: var(--muted); font-style: italic; }
 
+  /* ---------- similar-case search ---------- */
+  .sim-disclaimer {
+    color: var(--ink-2); font-size: 0.85rem; line-height: 1.55; margin-bottom: 16px;
+    max-width: 68ch;
+  }
+  .sim-disclaimer b { color: var(--gold); font-weight: 600; }
+  .sim-input-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start; }
+  #simQuery {
+    flex: 1 1 320px;
+    background: var(--bg-2);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 11px 13px;
+    font-size: 0.88rem;
+    font-family: var(--sans);
+    min-height: 84px;
+    resize: vertical;
+  }
+  #simQuery:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-wash); }
+  #simBtn {
+    cursor: pointer;
+    background: var(--gold-dim);
+    border: 1px solid var(--gold-dim);
+    color: var(--bg);
+    border-radius: 3px;
+    padding: 0 22px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    font-family: var(--sans);
+    height: 42px;
+    align-self: flex-start;
+  }
+  #simBtn:hover { background: var(--gold); border-color: var(--gold); }
+  #simBtn:disabled { opacity: 0.5; cursor: default; }
+  #simStatus { color: var(--muted); font-size: 0.8rem; margin-top: 12px; min-height: 1.2em; }
+  .sim-results { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+  .sim-card {
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--gold-dim);
+    border-radius: 3px;
+    padding: 14px 16px;
+    background: var(--bg-2);
+  }
+  .sim-card-top {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 12px; margin-bottom: 6px; flex-wrap: wrap;
+  }
+  .sim-case-no { font-family: var(--serif); color: var(--ink); font-size: 0.95rem; }
+  .sim-meta { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+  .sim-outcome {
+    display: inline-block; font-size: 0.72rem; color: var(--gold);
+    border: 1px solid rgba(204,159,59,0.35); border-radius: 20px;
+    padding: 2px 10px; margin-bottom: 8px;
+  }
+  .sim-snippet { color: var(--ink-2); font-size: 0.82rem; line-height: 1.55; }
+  .sim-score { color: var(--muted); font-size: 0.72rem; margin-top: 8px; }
+
   footer {
     color: var(--muted); font-size: 0.78rem; line-height: 1.6;
     margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--border);
@@ -297,6 +355,19 @@
         <button id="nextPage">Next &rarr;</button>
       </span>
     </div>
+  </div>
+
+  <div class="panel">
+    <h2>Find similar past cases</h2>
+    <div class="sim-disclaimer">
+      Describe a situation in plain words and this finds the past judgments whose text reads most similarly, with their real outcome attached. <b>This is text search, not prediction</b> — it does not tell you what will happen in your case or give legal advice, and it only searches the 571 cases that have an extracted outcome (see the <a href="https://github.com/huzaifaguru/pk-judgment-analytics/blob/main/reports/model_card.md">model card</a> for why that's a small, imperfect sample).
+    </div>
+    <div class="sim-input-row">
+      <textarea id="simQuery" placeholder="e.g. a civil appeal disputing possession of inherited property between siblings…"></textarea>
+      <button id="simBtn">Find similar cases</button>
+    </div>
+    <div id="simStatus"></div>
+    <div class="sim-results" id="simResults"></div>
   </div>
 
   <footer>
@@ -485,6 +556,100 @@ function render() {
   renderTable();
 }
 
+// ---------- similar-case search (client-side TF-IDF cosine similarity) ----------
+let SIM_DATA = null;
+let SIM_VOCAB_INDEX = null;
+
+async function ensureSimData() {
+  if (SIM_DATA) return;
+  el('simStatus').textContent = 'Loading case index…';
+  const res = await fetch('similarity_data.json');
+  SIM_DATA = await res.json();
+  SIM_VOCAB_INDEX = new Map(SIM_DATA.vocab.map((term, i) => [term, i]));
+  el('simStatus').textContent = '';
+}
+
+function tokenize(text) {
+  return (text.toLowerCase().match(/\b[a-z0-9]{2,}\b/g)) || [];
+}
+
+function buildQueryVector(text) {
+  const counts = new Map();
+  for (const tok of tokenize(text)) {
+    const idx = SIM_VOCAB_INDEX.get(tok);
+    if (idx === undefined) continue;
+    counts.set(idx, (counts.get(idx) || 0) + 1);
+  }
+  const weighted = new Map();
+  let normSq = 0;
+  for (const [idx, tf] of counts) {
+    const w = tf * SIM_DATA.idf[idx];
+    weighted.set(idx, w);
+    normSq += w * w;
+  }
+  const norm = Math.sqrt(normSq) || 1;
+  for (const [idx, w] of weighted) weighted.set(idx, w / norm);
+  return weighted;
+}
+
+function cosineSim(queryVec, docVec) {
+  let dot = 0;
+  for (const [idx, val] of docVec) {
+    const qv = queryVec.get(idx);
+    if (qv !== undefined) dot += qv * val;
+  }
+  return dot;
+}
+
+function renderSimResults(results) {
+  const box = el('simResults');
+  if (results.length === 0) {
+    box.innerHTML = '';
+    el('simStatus').textContent = 'No textually similar cases found for that — try describing it with different words.';
+    return;
+  }
+  el('simStatus').textContent = `Top ${results.length} closest matches by text similarity:`;
+  box.innerHTML = results.map(({ c, score }) => `
+    <div class="sim-card">
+      <div class="sim-card-top">
+        <span class="sim-case-no">${c.case_no || 'Case no. not extracted'}</span>
+        <span class="sim-meta">${c.year || '—'} · ${c.case_type || 'type unclassified'}</span>
+      </div>
+      <div class="sim-outcome">${c.outcome}</div>
+      <div class="sim-snippet">${c.snippet}</div>
+      <div class="sim-score">Text similarity: ${(score * 100).toFixed(0)}%</div>
+    </div>
+  `).join('');
+}
+
+async function runSimSearch() {
+  const query = el('simQuery').value.trim();
+  if (!query) {
+    el('simStatus').textContent = 'Type a short description first.';
+    return;
+  }
+  const btn = el('simBtn');
+  btn.disabled = true;
+  try {
+    await ensureSimData();
+    el('simStatus').textContent = 'Searching…';
+    const queryVec = buildQueryVector(query);
+    if (queryVec.size === 0) {
+      el('simResults').innerHTML = '';
+      el('simStatus').textContent = 'None of those words appear in the indexed cases — try more specific or different terms.';
+      return;
+    }
+    const scored = SIM_DATA.cases
+      .map(c => ({ c, score: cosineSim(queryVec, c.vec) }))
+      .filter(r => r.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+    renderSimResults(scored);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 async function init() {
   const res = await fetch('data.json');
   ALL = await res.json();
@@ -512,6 +677,11 @@ async function init() {
   el('nextPage').addEventListener('click', () => {
     const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     if (page < totalPages - 1) { page++; renderTable(); }
+  });
+
+  el('simBtn').addEventListener('click', runSimSearch);
+  el('simQuery').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) runSimSearch();
   });
 
   render();

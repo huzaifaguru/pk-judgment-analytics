@@ -1,16 +1,18 @@
 # Supreme Court of Pakistan — Judgment Analytics
 
+[![tests](https://github.com/huzaifaguru/pk-judgment-analytics/actions/workflows/tests.yml/badge.svg)](https://github.com/huzaifaguru/pk-judgment-analytics/actions/workflows/tests.yml)
+
 A data pipeline and analysis of Supreme Court of Pakistan judgment metadata: extraction, cleaning, exploratory analysis, and a baseline outcome classifier, with every limitation stated up front instead of glossed over.
 
-**[Live dashboard](https://huzaifaguru.github.io/pk-judgment-analytics/)** — interactive charts over the cleaned dataset (filter by year, judge, case type, outcome).
+**[Live dashboard](https://huzaifaguru.github.io/pk-judgment-analytics/)** — interactive charts over the cleaned dataset (filter by year, judge, case type, outcome), plus a similar-case search: describe a situation in plain words and find the past judgments whose text reads closest to it.
 
 ## What this is
 
-The raw material is 1,189 judgment records scraped and organized by author-judge folder, each PDF's metadata extracted with `pdfplumber` and regex (case number, parties, judges, sections cited, outcome, and more). That extraction script and the raw output are in this repo as they came out of the original extraction run — the source PDFs themselves are no longer available, so this project works from that extracted metadata forward.
+I built this end to end, starting from nothing but PDFs. The source is the [Supreme Court of Pakistan Judgments Dataset](https://www.kaggle.com/datasets/ammarshafiq/supreme-court-of-pakistan-judgments-dataset) on Kaggle: around 1,200 judgment PDFs, organized by judge, with no structured data attached at all. `original_project/extract_judgments.py` is the extraction script I wrote to turn raw PDF text into a usable 25-field table (case number, parties, judges, sections cited, outcome, word counts, and more), using `pdfplumber` for text extraction and hand-written regex for every field, since nothing off-the-shelf parses Pakistani Supreme Court judgment formatting. That took real trial and error: judgment PDFs aren't consistently formatted, so getting each field out reliably meant iterating the patterns against hundreds of edge cases. `original_project/analysis.ipynb` and `eda.ipynb` then cleaned that output and compared several models — Random Forest, XGBoost, a linear SVM — to find the best one. The raw output of that extraction run (1,189 rows) is `data/raw/out_raw.csv`; the source PDFs themselves aren't included here, since the Kaggle dataset ships PDFs only, not a redistributable CSV.
 
-This is a second pass over that project. The first version's cleaning notebook deduped on every column at once (so the same case filed once per bench member never got recognized as one case), filled every missing outcome with the string `"Unknown"` and then trained classifiers on it as if it were a real label, and the classifiers it built — Random Forest, XGBoost, and a linear SVM — all ended up just predicting the majority class. A 94% accuracy number in the original report meant nothing: 826 of 881 rows shared one label.
+Revisiting it for this repo, I audited that first pass and found the evaluation didn't hold up. The cleaning notebook deduped on every column at once, so the same case filed once per bench member never got recognized as one case. Every missing outcome got filled with the string `"Unknown"` and fed to the classifiers as if it were a real label. The result: all three models just learned to predict the majority class, and the 94% accuracy figure in the original report meant nothing — 826 of 881 rows shared one label.
 
-This version starts from the same raw extraction and rebuilds the pipeline properly: reproducible scripts instead of a 200-cell notebook, every cleaning decision documented with before/after counts, and a classifier evaluated against a majority-class baseline instead of next to one.
+This version keeps the original extraction and rebuilds everything downstream of it properly: reproducible scripts instead of a 200-cell notebook, every cleaning decision documented with before/after counts, and a classifier evaluated against a majority-class baseline instead of reported next to one.
 
 ## Repository layout
 
@@ -20,9 +22,13 @@ data/
   processed/clean_cases.csv    cleaned, deduplicated dataset (1,041 cases)
   processed/excluded_rows.csv  rows dropped, with the reason why
 src/
-  clean_data.py                raw -> clean pipeline
-  eda.py                       exploratory analysis, generates reports/figures/*.png
-  train_model.py               baseline outcome classifier + evaluation
+  clean_data.py                 raw -> clean pipeline
+  eda.py                        exploratory analysis, generates reports/figures/*.png
+  train_model.py                baseline outcome classifier + evaluation
+  build_dashboard_data.py       exports docs/data.json for the dashboard
+  build_similarity_index.py     exports docs/similarity_data.json for the similar-case search
+tests/
+  test_clean_data.py           unit tests for the cleaning logic's specific fixes
 docs/
   index.html                   the interactive dashboard (static, GitHub Pages)
 reports/
@@ -31,16 +37,20 @@ reports/
   model_card.md                classifier results and their limits
   figures/                     generated charts
 original_project/
-  the first-pass notebooks, scripts, and coursework reports, kept for reference
+  the original extraction script, cleaning/modeling notebooks, and coursework
+  reports — kept as-is, so the audit below is checkable, not just claimed
 ```
 
 ## Reproducing this
 
 ```bash
-pip install -r requirements.txt
-python src/clean_data.py     # data/raw/out_raw.csv -> data/processed/clean_cases.csv
-python src/eda.py            # -> reports/figures/, reports/eda_findings.md
-python src/train_model.py    # -> reports/model_card.md, confusion matrix
+pip install -r requirements-dev.txt
+python src/clean_data.py             # data/raw/out_raw.csv -> data/processed/clean_cases.csv
+python src/eda.py                    # -> reports/figures/, reports/eda_findings.md
+python src/train_model.py            # -> reports/model_card.md, confusion matrix
+python src/build_dashboard_data.py   # -> docs/data.json
+python src/build_similarity_index.py # -> docs/similarity_data.json
+pytest tests/                        # runs the unit tests, also checked on every push (see badge above)
 ```
 
 Each script is deterministic (fixed random seeds where relevant) and prints its own summary numbers as it runs — the numbers in `reports/` are not hand-written, they're generated by these scripts, so re-running should reproduce them.
@@ -69,9 +79,15 @@ Full detail in `reports/eda_findings.md`, generated from the cleaned data. Headl
 
 Result: **macro-F1 of 0.40, against a dummy baseline of 0.31.** That's real signal above the baseline, not nothing — but with only 31 examples each of `allowed` and `dismissed`, and a text feature that's limited to the judgment's first 20 lines (an extraction-script constraint, not a modeling choice), this is a decision-support baseline, not a reliable predictor. `reports/model_card.md` has the full classification report and confusion matrix, and states these limits before the numbers, not after.
 
+## Similar-case search, and what it deliberately isn't
+
+The dashboard also has a search box: describe a situation, and it returns the past judgments whose text reads closest to it, with their real outcome attached. This is retrieval, not prediction — `src/build_similarity_index.py` precomputes a TF-IDF vector for each of the 571 outcome-labeled cases, and `docs/index.html` computes the query's vector and its cosine similarity to every case client-side, in plain JS, against the exported vectors. No backend, same static-hosting model as the rest of the dashboard.
+
+It deliberately does not try to answer "what law applies here" or "how long will this take" — the first needs a structured corpus of statute text linked to sections (this dataset's `sections` field is just numbers with no governing act attached), and the second needs case-duration data across the judicial hierarchy that a Supreme Court-only dataset doesn't have. Search over past text is the part that's honestly buildable from what's here.
+
 ## Tech stack
 
-Python (pandas, scikit-learn, matplotlib) for the pipeline and analysis; plain HTML/CSS/JS (no build step) for the dashboard, so it runs directly on GitHub Pages.
+Python (pandas, scikit-learn, matplotlib) for the pipeline and analysis, with a small pytest suite covering the cleaning logic's specific bug fixes (run automatically on every push via GitHub Actions); plain HTML/CSS/JS (no build step, no framework) for the dashboard, so it runs directly on GitHub Pages.
 
 ## License
 
