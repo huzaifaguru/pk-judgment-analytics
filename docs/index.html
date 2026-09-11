@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Supreme Court of Pakistan — Judgment Analytics</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface: #fcfcfb;
+    --page: #f9f9f7;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --border: rgba(11,11,11,0.10);
+    --blue: #2a78d6;
+    --orange: #eb6834;
+    --aqua: #1baf7a;
+    --yellow: #eda100;
+    --magenta: #e87ba4;
+    --violet: #4a3aa7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --surface: #1a1a19;
+      --page: #0d0d0d;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --border: rgba(255,255,255,0.10);
+      --blue: #3987e5;
+      --orange: #d95926;
+      --aqua: #199e70;
+      --yellow: #c98500;
+      --magenta: #d55181;
+      --violet: #9085e9;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    padding: 0 16px 48px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header { padding: 32px 0 8px; }
+  h1 { font-size: 1.5rem; margin: 0 0 6px; }
+  .subtitle { color: var(--ink-2); font-size: 0.95rem; max-width: 60ch; }
+  .source-note { color: var(--muted); font-size: 0.8rem; margin-top: 10px; }
+  .source-note a { color: var(--muted); }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 20px 0;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .stat .value { font-size: 1.4rem; font-weight: 600; }
+  .stat .label { color: var(--ink-2); font-size: 0.78rem; margin-top: 2px; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .panel h2 { font-size: 1rem; margin: 0 0 12px; }
+
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .filters select, .filters input {
+    background: var(--page);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 7px 9px;
+    font-size: 0.85rem;
+    min-width: 120px;
+  }
+  .filters label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 3px; }
+  .filter-group { display: flex; flex-direction: column; }
+  #resetBtn {
+    align-self: flex-end;
+    cursor: pointer;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--ink-2);
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 0.8rem;
+  }
+  #resetBtn:hover { color: var(--ink); }
+  #matchCount { color: var(--muted); font-size: 0.8rem; margin-top: 10px; }
+
+  .charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+  }
+  .chart-title { font-size: 0.85rem; color: var(--ink-2); margin-bottom: 8px; }
+  svg.chart { width: 100%; height: auto; overflow: visible; }
+  .bar { fill: var(--blue); }
+  .bar:hover { fill: var(--orange); }
+  .axis-label { fill: var(--muted); font-size: 10px; }
+  .bar-value { fill: var(--ink-2); font-size: 10px; }
+  .tooltip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--ink);
+    color: var(--surface);
+    font-size: 0.75rem;
+    padding: 5px 9px;
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.1s;
+    z-index: 10;
+    white-space: nowrap;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  th, td {
+    text-align: left;
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--grid);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+  }
+  th { color: var(--muted); font-weight: 500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.02em; }
+  tbody tr:hover { background: var(--page); }
+  .table-scroll { overflow-x: auto; max-height: 420px; overflow-y: auto; border: 1px solid var(--grid); border-radius: 8px; }
+  .pager { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; font-size: 0.8rem; color: var(--ink-2); }
+  .pager button {
+    background: transparent; border: 1px solid var(--border); color: var(--ink-2);
+    border-radius: 6px; padding: 5px 10px; cursor: pointer; font-size: 0.8rem;
+  }
+  .pager button:disabled { opacity: 0.4; cursor: default; }
+  .outcome-tag { font-size: 0.72rem; color: var(--muted); }
+
+  footer { color: var(--muted); font-size: 0.78rem; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--grid); }
+  footer a { color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Supreme Court of Pakistan — Judgment Analytics</h1>
+    <div class="subtitle">A cleaned, deduplicated dataset of Supreme Court judgment metadata. Filter it below — every chart and the table update together.</div>
+    <div class="source-note">Read the pipeline and its limitations in the <a href="https://github.com/huzaifaguru/pk-judgment-analytics/blob/main/reports/data_quality_report.md">data quality report</a> and <a href="https://github.com/huzaifaguru/pk-judgment-analytics">README</a> before drawing conclusions from this.</div>
+  </header>
+
+  <div class="stat-row" id="statRow"></div>
+
+  <div class="panel">
+    <h2>Filters</h2>
+    <div class="filters">
+      <div class="filter-group">
+        <label for="fYear">Year</label>
+        <select id="fYear"><option value="">All years</option></select>
+      </div>
+      <div class="filter-group">
+        <label for="fCaseType">Case type</label>
+        <select id="fCaseType"><option value="">All case types</option></select>
+      </div>
+      <div class="filter-group">
+        <label for="fLegal">Legal category</label>
+        <select id="fLegal"><option value="">All categories</option></select>
+      </div>
+      <div class="filter-group">
+        <label for="fOutcome">Outcome</label>
+        <select id="fOutcome"><option value="">All outcomes</option></select>
+      </div>
+      <div class="filter-group">
+        <label for="fJudge">Judge folder</label>
+        <select id="fJudge"><option value="">All judges</option></select>
+      </div>
+      <div class="filter-group" style="flex:1; min-width:180px;">
+        <label for="fSearch">Search (case no. / party)</label>
+        <input id="fSearch" type="text" placeholder="e.g. Civil Appeal, a party name…">
+      </div>
+      <button id="resetBtn">Reset filters</button>
+    </div>
+    <div id="matchCount"></div>
+  </div>
+
+  <div class="panel">
+    <div class="charts">
+      <div>
+        <div class="chart-title">Outcome (labeled cases in current filter)</div>
+        <svg class="chart" id="chartOutcome"></svg>
+      </div>
+      <div>
+        <div class="chart-title">Cases per year</div>
+        <svg class="chart" id="chartYear"></svg>
+      </div>
+      <div>
+        <div class="chart-title">Case type</div>
+        <svg class="chart" id="chartCaseType"></svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Cases</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Case no.</th><th>Judge folder</th><th>Year</th><th>Case type</th>
+            <th>Outcome</th><th>Word count</th><th>Sections</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <span id="pageInfo"></span>
+      <span>
+        <button id="prevPage">&larr; Prev</button>
+        <button id="nextPage">Next &rarr;</button>
+      </span>
+    </div>
+  </div>
+
+  <footer>
+    Data: extracted from Supreme Court of Pakistan judgment PDFs, cleaned in this repository's <code>src/clean_data.py</code>.
+    Fields that couldn't be reliably extracted are left blank rather than guessed — see the data quality report for exactly which, and why.
+  </footer>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const PAGE_SIZE = 25;
+let ALL = [];
+let filtered = [];
+let page = 0;
+
+const el = (id) => document.getElementById(id);
+const tooltip = el('tooltip');
+
+function showTooltip(evt, text) {
+  tooltip.textContent = text;
+  tooltip.style.left = (evt.clientX + 12) + 'px';
+  tooltip.style.top = (evt.clientY + 12) + 'px';
+  tooltip.style.opacity = 1;
+}
+function hideTooltip() { tooltip.style.opacity = 0; }
+
+function uniqueSorted(rows, key) {
+  return [...new Set(rows.map(r => r[key]).filter(v => v !== null && v !== undefined))].sort((a, b) =>
+    typeof a === 'number' ? a - b : String(a).localeCompare(String(b))
+  );
+}
+
+function populateSelect(id, values) {
+  const sel = el(id);
+  for (const v of values) {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    sel.appendChild(opt);
+  }
+}
+
+function applyFilters() {
+  const year = el('fYear').value;
+  const caseType = el('fCaseType').value;
+  const legal = el('fLegal').value;
+  const outcome = el('fOutcome').value;
+  const judge = el('fJudge').value;
+  const search = el('fSearch').value.trim().toLowerCase();
+
+  filtered = ALL.filter(r => {
+    if (year && String(r.year) !== year) return false;
+    if (caseType && r.case_type !== caseType) return false;
+    if (legal && r.legal_category !== legal) return false;
+    if (outcome && r.outcome !== outcome) return false;
+    if (judge && r.judge_folder !== judge) return false;
+    if (search) {
+      const hay = [r.case_no, r.petitioner, r.respondent, r.filename].join(' ').toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+  page = 0;
+  render();
+}
+
+function countBy(rows, key) {
+  const counts = {};
+  for (const r of rows) {
+    const v = r[key];
+    if (v === null || v === undefined) continue;
+    counts[v] = (counts[v] || 0) + 1;
+  }
+  return counts;
+}
+
+// simple horizontal bar chart, sorted descending, top N
+function drawBarChart(svgId, counts, opts = {}) {
+  const svg = el(svgId);
+  svg.innerHTML = '';
+  let entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  if (opts.sortByKey) entries = Object.entries(counts).sort((a, b) => Number(a[0]) - Number(b[0]));
+  if (opts.limit) entries = entries.slice(0, opts.limit);
+  if (entries.length === 0) {
+    svg.setAttribute('viewBox', '0 0 300 60');
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', 10); t.setAttribute('y', 30);
+    t.setAttribute('class', 'axis-label');
+    t.textContent = 'No data for this filter';
+    svg.appendChild(t);
+    return;
+  }
+  const max = Math.max(...entries.map(e => e[1]));
+  const rowH = 22;
+  const width = 560;
+  const labelW = opts.labelWidth || 130;
+  const height = entries.length * rowH + 10;
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+  entries.forEach(([label, count], i) => {
+    const y = i * rowH + 4;
+    const barMaxW = width - labelW - 46;
+    const barW = Math.max(2, (count / max) * barMaxW);
+
+    const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    text.setAttribute('x', labelW - 8);
+    text.setAttribute('y', y + 12);
+    text.setAttribute('text-anchor', 'end');
+    text.setAttribute('class', 'axis-label');
+    const lbl = String(label);
+    text.textContent = lbl.length > 22 ? lbl.slice(0, 21) + '…' : lbl;
+    svg.appendChild(text);
+
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('x', labelW);
+    rect.setAttribute('y', y);
+    rect.setAttribute('width', barW);
+    rect.setAttribute('height', rowH - 6);
+    rect.setAttribute('rx', 3);
+    rect.setAttribute('class', 'bar');
+    rect.addEventListener('mousemove', (e) => showTooltip(e, `${label}: ${count}`));
+    rect.addEventListener('mouseleave', hideTooltip);
+    svg.appendChild(rect);
+
+    const valText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    valText.setAttribute('x', labelW + barW + 6);
+    valText.setAttribute('y', y + 12);
+    valText.setAttribute('class', 'bar-value');
+    valText.textContent = count;
+    svg.appendChild(valText);
+  });
+}
+
+function renderStats(rows) {
+  const total = rows.length;
+  const labeled = rows.filter(r => r.outcome).length;
+  const years = rows.map(r => r.year).filter(Boolean);
+  const yearRange = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : '—';
+  const judges = new Set(rows.map(r => r.judge_folder).filter(Boolean)).size;
+
+  const stats = [
+    ['Cases in view', total],
+    ['With an extracted outcome', `${labeled} (${total ? Math.round(100*labeled/total) : 0}%)`],
+    ['Year range', yearRange],
+    ['Judge folders represented', judges],
+  ];
+  el('statRow').innerHTML = stats.map(([label, value]) =>
+    `<div class="stat"><div class="value">${value}</div><div class="label">${label}</div></div>`
+  ).join('');
+}
+
+function renderTable() {
+  const start = page * PAGE_SIZE;
+  const rows = filtered.slice(start, start + PAGE_SIZE);
+  el('tableBody').innerHTML = rows.map(r => `
+    <tr>
+      <td title="${r.case_no || ''}">${r.case_no || '—'}</td>
+      <td title="${r.judge_folder || ''}">${r.judge_folder || '—'}</td>
+      <td>${r.year || '—'}</td>
+      <td>${r.case_type || '—'}</td>
+      <td>${r.outcome ? r.outcome : '<span class="outcome-tag">not extracted</span>'}</td>
+      <td>${r.word_count ?? '—'}</td>
+      <td>${r.num_sections ?? '—'}</td>
+    </tr>
+  `).join('');
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  el('pageInfo').textContent = `Page ${page + 1} of ${totalPages}`;
+  el('prevPage').disabled = page === 0;
+  el('nextPage').disabled = page >= totalPages - 1;
+}
+
+function render() {
+  el('matchCount').textContent = `${filtered.length} of ${ALL.length} cases match these filters`;
+  renderStats(filtered);
+  drawBarChart('chartOutcome', countBy(filtered.filter(r => r.outcome), 'outcome'));
+  drawBarChart('chartYear', countBy(filtered, 'year'), { sortByKey: true, labelWidth: 60 });
+  drawBarChart('chartCaseType', countBy(filtered, 'case_type'));
+  renderTable();
+}
+
+async function init() {
+  const res = await fetch('data.json');
+  ALL = await res.json();
+  filtered = ALL;
+
+  populateSelect('fYear', uniqueSorted(ALL, 'year'));
+  populateSelect('fCaseType', uniqueSorted(ALL, 'case_type'));
+  populateSelect('fLegal', uniqueSorted(ALL, 'legal_category'));
+  populateSelect('fOutcome', uniqueSorted(ALL, 'outcome'));
+  populateSelect('fJudge', uniqueSorted(ALL, 'judge_folder'));
+
+  ['fYear', 'fCaseType', 'fLegal', 'fOutcome', 'fJudge'].forEach(id =>
+    el(id).addEventListener('change', applyFilters)
+  );
+  el('fSearch').addEventListener('input', () => {
+    clearTimeout(window._searchDebounce);
+    window._searchDebounce = setTimeout(applyFilters, 150);
+  });
+  el('resetBtn').addEventListener('click', () => {
+    ['fYear', 'fCaseType', 'fLegal', 'fOutcome', 'fJudge'].forEach(id => el(id).value = '');
+    el('fSearch').value = '';
+    applyFilters();
+  });
+  el('prevPage').addEventListener('click', () => { if (page > 0) { page--; renderTable(); } });
+  el('nextPage').addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (page < totalPages - 1) { page++; renderTable(); }
+  });
+
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
